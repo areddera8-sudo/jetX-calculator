@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>JETX HASH CALCULATOR</title>
+<style>
+body{
+background:#0f172a;
+color:white;
+font-family:Arial;
+text-align:center;
+padding:20px;
+}
+input,button{
+padding:10px;
+margin:10px;
+width:80%;
+border-radius:8px;
+border:none;
+}
+button{
+background:#16a34a;
+color:white;
+font-weight:bold;
+}
+.result{
+background:#dc2626;
+padding:15px;
+margin-top:15px;
+border-radius:10px;
+}
+</style>
+</head>
+<body>
+
+<h2>JETX SHA-256 CALCULATOR</h2>
+
+<p id="heure"></p>
+
+<input type="text" id="hashInput" placeholder="Ampidiro hash eto">
+
+<button onclick="calculate()">CALCULER</button>
+
+<div class="result" id="result"></div>
+
+<script>
+function updateHeure(){
+let now = new Date();
+document.getElementById("heure").innerHTML =
+"Heure actuelle: " + now.toLocaleTimeString();
+}
+setInterval(updateHeure,1000);
+
+async function calculate(){
+let hashText = document.getElementById("hashInput").value;
+let now = new Date().getTime();
+let mix = hashText + now;
+
+const encoder = new TextEncoder();
+const data = encoder.encode(mix);
+const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+const hashArray = Array.from(new Uint8Array(hashBuffer));
+const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+
+let number = parseInt(hashHex.substring(0,8),16);
+let result = (number % 1000) / 100 + 1;
+
+document.getElementById("result").innerHTML =
+"Résultat: " + result.toFixed(2) + "x";
+}
+</script>
+
+</body>
+</html>
