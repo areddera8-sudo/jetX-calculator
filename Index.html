@@ -2,8 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Crash Tracker - by dera</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<title>Heure Calculator - by dera</title>
 <style>
 body{
     background:#0f172a;
@@ -24,42 +23,46 @@ button{
     background:#22c55e;
     color:white;
     font-weight:bold;
+    margin:5px;
 }
 #result{
-    font-size:28px;
+    font-size:22px;
     margin-top:15px;
     color:#facc15;
 }
-canvas{
-    background:#111827;
-    margin-top:20px;
-}
 #history{
     margin-top:20px;
-    font-size:14px;
-    max-height:150px;
+    max-height:200px;
     overflow:auto;
+    background:#111827;
+    padding:10px;
+    border-radius:10px;
+}
+.historyItem{
+    font-size:14px;
+    margin:5px 0;
+    border-bottom:1px solid #1f2937;
+    padding-bottom:5px;
 }
 </style>
 </head>
 <body>
 
-<h2>CRASH TRACKER</h2>
+<h2>HEURE CALCULATOR</h2>
 <p>by dera</p>
+
+<label>Heure de départ :</label><br>
+<input type="datetime-local" id="heureDepart"><br>
 
 <label>Hash :</label><br>
 <input type="text" id="hashInput" placeholder="Ampidiro hash"><br>
 
-<label>Heure actuelle :</label><br>
-<input type="datetime-local" id="heureInput"><br>
+<button onclick="calculate()">CALCULER</button>
+<button onclick="clearHistory()">CLEAR HISTORIQUE</button>
 
-<button onclick="generate()">GENERATE</button>
-
-<div id="result">Résultat: --</div>
-<div id="finalHeure">Heure finale: --</div>
-<div id="countdown">Countdown: --</div>
-
-<canvas id="graph" width="350" height="200"></canvas>
+<div id="result">
+Résultat finale : --
+</div>
 
 <div id="history">
 <h3>Historique</h3>
@@ -69,30 +72,10 @@ canvas{
 <script>
 
 // Auto remplir heure actuelle
-document.getElementById("heureInput").value =
+document.getElementById("heureDepart").value =
 new Date().toISOString().slice(0,16);
 
-let ctx = document.getElementById('graph').getContext('2d');
-let chart = new Chart(ctx,{
-type:'line',
-data:{
-labels:[],
-datasets:[{
-label:'Crash',
-data:[],
-borderColor:'lime',
-borderWidth:3,
-fill:false
-}]
-},
-options:{
-responsive:false,
-scales:{
-y:{min:0,max:1000}
-}
-}
-});
-
+// SHA-256
 async function sha256(message){
 const msgBuffer = new TextEncoder().encode(message);
 const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -100,60 +83,48 @@ const hashArray = Array.from(new Uint8Array(hashBuffer));
 return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
 }
 
-async function generate(){
+async function calculate(){
 
+let heure = document.getElementById("heureDepart").value;
 let hash = document.getElementById("hashInput").value;
-let heure = document.getElementById("heureInput").value;
 
-if(hash == "") hash = "defaultHash";
+if(hash=="") hash="defaultHash";
 
 let mix = hash + heure;
 let hashed = await sha256(mix);
 
-// maka isa avy amin'ny hash
-let num = parseInt(hashed.substring(0,8),16);
+// Hex 3 isa
+let hex3 = hashed.substring(0,3);
+let decimal = parseInt(hex3,16);
 
-// Tour [2.01 ; 1000]
-let tour = (2.01 + (num % 99799)/100).toFixed(2);
-if(tour > 1000) tour = 1000;
+// Offset minute max 255
+let offsetMinute = decimal % 256;
+
+let date = new Date(heure);
+date.setMinutes(date.getMinutes() + offsetMinute);
+
+let finalHeure = date.toLocaleTimeString();
 
 document.getElementById("result").innerHTML =
-"Résultat: " + tour + "x";
+"Hex(3): " + hex3.toUpperCase() +
+"<br>Minutes ajoutées: " + offsetMinute +
+"<br>Résultat finale: " + finalHeure;
 
-// Heure finale (+2 min exemple auto)
-let date = new Date(heure);
-date.setMinutes(date.getMinutes() + 2);
-let final = date.toLocaleTimeString();
-document.getElementById("finalHeure").innerHTML =
-"Heure finale: " + final;
+// Ajouter historique
+let historyList = document.getElementById("historyList");
+let item = document.createElement("div");
+item.className = "historyItem";
+item.innerHTML =
+"[" + new Date().toLocaleTimeString() + "] → "
++ finalHeure +
+" (Hex: " + hex3.toUpperCase() + ")";
+historyList.prepend(item);
 
-// Countdown
-let countdownSec = 120;
-let interval = setInterval(()=>{
-countdownSec--;
-document.getElementById("countdown").innerHTML =
-"Countdown: " + countdownSec + "s";
-if(countdownSec<=0) clearInterval(interval);
-},1000);
-
-// Graph crash style
-chart.data.labels = [];
-chart.data.datasets[0].data = [];
-for(let i=0;i<10;i++){
-chart.data.labels.push(i);
-chart.data.datasets[0].data.push(
-(tour/10)*i
-);
 }
-chart.update();
 
-// Historique
-let hist = document.getElementById("historyList");
-let newItem = document.createElement("div");
-newItem.innerHTML =
-"[" + final + "] → " + tour + "x";
-hist.prepend(newItem);
-
+// Clear historique
+function clearHistory(){
+document.getElementById("historyList").innerHTML="";
 }
 
 </script>
