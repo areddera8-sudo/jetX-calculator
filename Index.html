@@ -2,72 +2,160 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>JETX HASH CALCULATOR</title>
+<title>Crash Tracker - by dera</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
 body{
-background:#0f172a;
-color:white;
-font-family:Arial;
-text-align:center;
-padding:20px;
+    background:#0f172a;
+    color:white;
+    font-family:Arial;
+    text-align:center;
 }
-input,button{
-padding:10px;
-margin:10px;
-width:80%;
-border-radius:8px;
-border:none;
+input{
+    padding:8px;
+    margin:5px;
+    border-radius:8px;
+    border:none;
 }
 button{
-background:#16a34a;
-color:white;
-font-weight:bold;
+    padding:10px 20px;
+    border:none;
+    border-radius:10px;
+    background:#22c55e;
+    color:white;
+    font-weight:bold;
 }
-.result{
-background:#dc2626;
-padding:15px;
-margin-top:15px;
-border-radius:10px;
+#result{
+    font-size:28px;
+    margin-top:15px;
+    color:#facc15;
+}
+canvas{
+    background:#111827;
+    margin-top:20px;
+}
+#history{
+    margin-top:20px;
+    font-size:14px;
+    max-height:150px;
+    overflow:auto;
 }
 </style>
 </head>
 <body>
 
-<h2>JETX SHA-256 CALCULATOR</h2>
+<h2>CRASH TRACKER</h2>
+<p>by dera</p>
 
-<p id="heure"></p>
+<label>Hash :</label><br>
+<input type="text" id="hashInput" placeholder="Ampidiro hash"><br>
 
-<input type="text" id="hashInput" placeholder="Ampidiro hash eto">
+<label>Heure actuelle :</label><br>
+<input type="datetime-local" id="heureInput"><br>
 
-<button onclick="calculate()">CALCULER</button>
+<button onclick="generate()">GENERATE</button>
 
-<div class="result" id="result"></div>
+<div id="result">Résultat: --</div>
+<div id="finalHeure">Heure finale: --</div>
+<div id="countdown">Countdown: --</div>
+
+<canvas id="graph" width="350" height="200"></canvas>
+
+<div id="history">
+<h3>Historique</h3>
+<div id="historyList"></div>
+</div>
 
 <script>
-function updateHeure(){
-let now = new Date();
-document.getElementById("heure").innerHTML =
-"Heure actuelle: " + now.toLocaleTimeString();
+
+// Auto remplir heure actuelle
+document.getElementById("heureInput").value =
+new Date().toISOString().slice(0,16);
+
+let ctx = document.getElementById('graph').getContext('2d');
+let chart = new Chart(ctx,{
+type:'line',
+data:{
+labels:[],
+datasets:[{
+label:'Crash',
+data:[],
+borderColor:'lime',
+borderWidth:3,
+fill:false
+}]
+},
+options:{
+responsive:false,
+scales:{
+y:{min:0,max:1000}
 }
-setInterval(updateHeure,1000);
+}
+});
 
-async function calculate(){
-let hashText = document.getElementById("hashInput").value;
-let now = new Date().getTime();
-let mix = hashText + now;
-
-const encoder = new TextEncoder();
-const data = encoder.encode(mix);
-const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+async function sha256(message){
+const msgBuffer = new TextEncoder().encode(message);
+const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
 const hashArray = Array.from(new Uint8Array(hashBuffer));
-const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+return hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+}
 
-let number = parseInt(hashHex.substring(0,8),16);
-let result = (number % 1000) / 100 + 1;
+async function generate(){
+
+let hash = document.getElementById("hashInput").value;
+let heure = document.getElementById("heureInput").value;
+
+if(hash == "") hash = "defaultHash";
+
+let mix = hash + heure;
+let hashed = await sha256(mix);
+
+// maka isa avy amin'ny hash
+let num = parseInt(hashed.substring(0,8),16);
+
+// Tour [2.01 ; 1000]
+let tour = (2.01 + (num % 99799)/100).toFixed(2);
+if(tour > 1000) tour = 1000;
 
 document.getElementById("result").innerHTML =
-"Résultat: " + result.toFixed(2) + "x";
+"Résultat: " + tour + "x";
+
+// Heure finale (+2 min exemple auto)
+let date = new Date(heure);
+date.setMinutes(date.getMinutes() + 2);
+let final = date.toLocaleTimeString();
+document.getElementById("finalHeure").innerHTML =
+"Heure finale: " + final;
+
+// Countdown
+let countdownSec = 120;
+let interval = setInterval(()=>{
+countdownSec--;
+document.getElementById("countdown").innerHTML =
+"Countdown: " + countdownSec + "s";
+if(countdownSec<=0) clearInterval(interval);
+},1000);
+
+// Graph crash style
+chart.data.labels = [];
+chart.data.datasets[0].data = [];
+for(let i=0;i<10;i++){
+chart.data.labels.push(i);
+chart.data.datasets[0].data.push(
+(tour/10)*i
+);
 }
+chart.update();
+
+// Historique
+let hist = document.getElementById("historyList");
+let newItem = document.createElement("div");
+newItem.innerHTML =
+"[" + final + "] → " + tour + "x";
+hist.prepend(newItem);
+
+}
+
 </script>
 
 </body>
