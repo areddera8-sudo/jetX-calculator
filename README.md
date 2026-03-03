@@ -1,1 +1,1 @@
-# jetX-calculator
+# jetX-calcul
