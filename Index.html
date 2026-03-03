@@ -1,0 +1,9 @@
+public class Main {
+    public static void main(String[] args) {
+        String hash = "abc123def456";
+        int hour = 15;
+
+        String result = HashUtil.computeHashWithHour(hash, hour);
+        System.out.println("SHA-512 hash of combined input: " + result);
+    }
+}
